@@ -432,6 +432,9 @@ import scrapy
 import pandas as pd
 from openpyxl import Workbook, load_workbook
 
+from scrapy.selector import Selector
+from w3lib.html import remove_tags
+
 class GorillaMillSpider(scrapy.Spider):
     name = "gorillamill"
     allowed_domains = ["gorillamill.com"]
@@ -454,13 +457,22 @@ class GorillaMillSpider(scrapy.Spider):
         title = title.strip() if title else ''
         image  =  response.css('div#specs img.tool::attr(src)').get()
         catalog_number = response.xpath('//div/strong[1]/following-sibling::text()').get()
+        # catalog_number = response.xpath('//div/strong[1]/following-sibling::text()').get()
         checkstock = response.css('a[data-stock]::attr(data-stock)').get()
+        sel = Selector(text=response.text)
+        for a in sel.xpath('//div[@class="uk-width-1-1 uk-width-medium-4-10"]/a'):
+            a.extract()
+
+        # mengambil teks
+        desc = sel.xpath('//div[@class="uk-width-1-1 uk-width-medium-4-10"]/strong[contains(text(), "Desc:")]/following-sibling::text()[normalize-space()]').getall()
+        desc = " ".join(desc).replace("\n", "").replace("\r", "").replace("\t", "").strip()
         
         itemlist = {
             "title": title,
             "image": image,
             "catalog_number": catalog_number,
-            "Check Stock": checkstock
+            "Check Stock": checkstock,
+            'desc': desc
         }
         print(itemlist)
 
@@ -476,14 +488,14 @@ class GorillaMillSpider(scrapy.Spider):
             sheet = book.active
             sheet.title = sheet_name
             # add header row
-            header = ["Product ID", "title", "image", "catalog_number", "Check Stock"]
+            header = ["Product ID", "catalog_number", "title", "image",  "Check Stock", "desc"]
             sheet.append(header)
         else:
             sheet = book[sheet_name]
 
         # add data row
         product_id = response.meta.get('product_id')
-        row = [product_id, itemlist['title'], itemlist['image'], itemlist['catalog_number'], itemlist['Check Stock']]
+        row = [product_id, itemlist['title'], itemlist['image'], itemlist['catalog_number'], itemlist['Check Stock'], itemlist['desc']]
         sheet.append(row)
 
         # Save the workbook
