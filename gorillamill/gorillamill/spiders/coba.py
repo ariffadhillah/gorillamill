@@ -105,12 +105,11 @@ class GorillaMillSpider(scrapy.Spider):
         itemlist = {}
         title = " ".join(response.css('div#specs h2::text, h2::text, h1::text').getall())
         title = title.strip().replace('\n', '').replace("\r", "").replace("\t", "") if title else ''
-
         image = response.css('div#specs img.tool::attr(src)').get()
         catalog_number = response.xpath('//div/strong[1]/following-sibling::text()').get()
         checkstock = response.css('a[data-stock]::attr(data-stock)').get()
         desc = response.xpath('normalize-space(//div[@class="uk-width-1-1 uk-width-medium-4-10"])')
-        desc = desc.get().replace('Check Stock >>', '') if desc else ''
+        desc = desc.get().replace('Check Stock >>', '').replace('Desc:', '').replace(',', '| ')  if desc else ''
 
         itemlist = {
             "title": title,
