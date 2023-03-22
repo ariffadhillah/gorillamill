@@ -107,16 +107,34 @@ class GorillaMillSpider(scrapy.Spider):
         title = title.strip().replace('\n', '').replace("\r", "").replace("\t", "") if title else ''
         image = response.css('div#specs img.tool::attr(src)').get()
         catalog_number = response.xpath('//div/strong[1]/following-sibling::text()').get()
+        # price
+        price = response.xpath('//strong[text()="Price(USD):"]/following-sibling::text()').get().strip()
         checkstock = response.css('a[data-stock]::attr(data-stock)').get()
         desc = response.xpath('normalize-space(//div[@class="uk-width-1-1 uk-width-medium-4-10"])')
-        desc = desc.get().replace('Check Stock >>', '').replace('Desc:', '').replace(',', '| ')  if desc else ''
+        attributes = desc.get().replace('Check Stock >>', '').replace(',', '| ')  if desc else ''
+        
+        desc_element = response.xpath('//div[@id="desc"]')
+        
+        # menggunakan extract() untuk mengambil teks dari elemen tersebut
+        
+        description = desc_element.extract_first()
+        # menggunakan XPath untuk mencari semua elemen HTML <img> dengan kelas "brand"
+        remove_elements = response.xpath('//img[@class="brand"] | //a')
+        # menghapus semua elemen HTML <img> yang ditemukan dari teks menggunakan replace()
+        for img_element in remove_elements:
+            img_text = img_element.extract()
+            description = description.replace(img_text, '')
 
+        tolerances = response.xpath('//*[@id="tolerances"]')
+        
         itemlist = {
             "title": title,
             "image": image,
             "catalog_number": catalog_number,
+            "price": price,
             "Check Stock": checkstock,
-            'desc': desc
+            'attributes': attributes,
+            'description': description
         }
         print(itemlist)
 
@@ -132,14 +150,14 @@ class GorillaMillSpider(scrapy.Spider):
             sheet = book.active
             sheet.title = sheet_name
             # add header row
-            header = ["Product ID", "catalog_number", "title", "image", "Check Stock", "desc"]
+            header = ["Product ID", "catalog_number", "title", "image", "Check Stock","price", "attributes", "description"]
             sheet.append(header)
         else:
             sheet = book[sheet_name]
 
         # add data row
         product_id = response.meta.get('product_id')
-        row = [product_id, itemlist['catalog_number'], itemlist['title'], itemlist['image'], itemlist['Check Stock'], itemlist['desc']]
+        row = [product_id, itemlist['catalog_number'], itemlist['title'], itemlist['image'], itemlist['Check Stock'], itemlist['price'], itemlist['attributes'],itemlist['description']]
         sheet.append(row)
 
         # Save the workbook
